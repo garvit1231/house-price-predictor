@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate House Predictor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+    --bg1:#0f2027;
+    --bg2:#203a43;
+    --bg3:#2c5364;
+    --text:#fff;
+    --card:rgba(255,255,255,0.12);
+    --input-bg:rgba(255,255,255,0.92);
+    --input-text:#111;
+    --accent1:#19f5d1;
+    --accent2:#1a8cff;
+}
+
+body.light{
+    --bg1:#74ebd5;
+    --bg2:#ACB6E5;
+    --bg3:#ffffff;
+    --text:#111;
+    --card:rgba(255,255,255,0.72);
+    --input-bg:#ffffff;
+    --input-text:#111;
+    --accent1:#00c6ff;
+    --accent2:#0072ff;
+}
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    font-family:'Segoe UI',sans-serif;
+    color:var(--text);
+    min-height:100vh;
+    overflow-x:hidden;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2),var(--bg3));
+    animation:pageIn 1s ease;
+}
+
+#splash{
+    position:fixed;
+    inset:0;
+    background:linear-gradient(135deg,#0f2027,#203a43,#2c5364);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:white;
+    font-size:26px;
+    font-weight:700;
+    z-index:999;
+    animation:fadeOut 2.1s forwards;
+}
+
+@keyframes fadeOut{
+    0%{opacity:1}
+    80%{opacity:1}
+    100%{opacity:0;visibility:hidden}
+}
+
+@keyframes pageIn{
+    from{opacity:0;transform:scale(1.03)}
+    to{opacity:1;transform:scale(1)}
+}
+
+@keyframes cardIn{
+    from{opacity:0;transform:translate(-50%,-58%)}
+    to{opacity:1;transform:translate(-50%,-50%)}
+}
+
+@keyframes floatCard{
+    0%,100%{transform:translate(-50%,-50%)}
+    50%{transform:translate(-50%,-52.3%)}
+}
+
+@keyframes pulse{
+    0%{transform:translateX(-50%) scale(1)}
+    50%{transform:translateX(-50%) scale(1.55)}
+    100%{transform:translateX(-50%) scale(1)}
+}
+
+@keyframes pop{
+    0%{transform:scale(0.92);opacity:0}
+    100%{transform:scale(1);opacity:1}
+}
+
+canvas#bg{
+    position:fixed;
+    inset:0;
+    z-index:-1;
+}
+
+.india-map{
+    position:fixed;
+    inset:0;
+    opacity:0.10;
+    z-index:-2;
+    pointer-events:none;
+}
+
+.india-map img{
+    width:100%;
+    height:100%;
+    object-fit:contain;
+}
+
+.city{
+    position:absolute;
+    font-size:11px;
+    color:#00ffcc;
+    cursor:pointer;
+    transform:translate(-50%,-50%);
+    pointer-events:auto;
+    user-select:none;
+}
+
+.city::before{
+    content:"";
+    width:8px;
+    height:8px;
+    background:#00ffcc;
+    border-radius:50%;
+    position:absolute;
+    top:-10px;
+    left:50%;
+    transform:translateX(-50%);
+    box-shadow:0 0 15px #00ffcc;
+    animation:pulse 1.5s infinite;
+}
+
+.box{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    width:min(92%,400px);
+    padding:24px;
+    border-radius:24px;
+    background:var(--card);
+    backdrop-filter:blur(22px);
+    border:1px solid rgba(255,255,255,0.12);
+    box-shadow:0 12px 40px rgba(0,0,0,0.35);
+    text-align:center;
+    animation:cardIn 1s ease, floatCard 4s ease-in-out infinite;
+}
+
+.toggle{
+    position:absolute;
+    top:10px;
+    right:14px;
+    cursor:pointer;
+    font-size:28px;
+}
+
+h3{
+    margin:8px 0 18px;
+    font-size:24px;
+}
+
+.input-box{
+    width:100%;
+    height:56px;
+    padding:0 16px;
+    margin:9px 0;
+    border:none;
+    border-radius:14px;
+    outline:none;
+    font-size:16px;
+    background:var(--input-bg);
+    color:var(--input-text);
+    transition:0.25s;
+}
+
+.input-box:focus{
+    box-shadow:0 0 14px rgba(0,255,204,0.35);
+    transform:scale(1.02);
+}
+
+button{
+    width:100%;
+    height:56px;
+    margin-top:12px;
+    border:none;
+    border-radius:14px;
+    background:linear-gradient(45deg,var(--accent1),var(--accent2));
+    color:#07263d;
+    font-size:17px;
+    font-weight:700;
+    cursor:pointer;
+    transition:0.25s;
+    position:relative;
+    overflow:hidden;
+}
+
+button:hover{
+    transform:scale(1.03);
+}
+
+button:disabled{
+    opacity:0.75;
+    cursor:not-allowed;
+}
+
+#result{
+    margin-top:16px;
+    min-height:34px;
+    font-size:18px;
+    font-weight:700;
+}
+
+.success{
+    color:var(--text);
+    animation:pop 0.35s ease;
+}
+
+.error{
+    color:#ff6b6b;
+    animation:pop 0.35s ease;
+}
+
+.graph-wrap{
+    margin-top:14px;
+    padding:14px;
+    border-radius:18px;
+    background:rgba(255,255,255,0.07);
+    display:none;
+    animation:pop 0.45s ease;
+}
+
+#priceChart{
+    width:100% !important;
+    height:240px !important;
+}
+
+@media (max-width:480px){
+    .box{
+        width:92%;
+        padding:20px;
+    }
+
+    h3{
+        font-size:22px;
+    }
+
+    .input-box,
+    button{
+        height:54px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div id="splash">🚀 Loading Smart Predictor...</div>
+
+<canvas id="bg"></canvas>
+
+<div class="india-map">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/1/17/India-map-en.svg" alt="India Map">
+    <div class="city" onclick="setCity('delhi')" style="top:30%;left:52%">Delhi</div>
+    <div class="city" onclick="setCity('mumbai')" style="top:65%;left:35%">Mumbai</div>
+    <div class="city" onclick="setCity('bangalore')" style="top:75%;left:55%">Bangalore</div>
+    <div class="city" onclick="setCity('chennai')" style="top:70%;left:60%">Chennai</div>
+    <div class="city" onclick="setCity('kolkata')" style="top:55%;left:65%">Kolkata</div>
+</div>
+
+<div class="box">
+    <div class="toggle" onclick="toggleMode()">🌙</div>
+
+    <h3>🏠 Smart Price AI</h3>
+
+    <select id="location" class="input-box">
+        <option>Loading locations...</option>
+    </select>
+
+    <input id="sqft" class="input-box" type="number" placeholder="Square Feet" min="100">
+    <input id="bath" class="input-box" type="number" placeholder="Bathrooms" min="1">
+    <input id="bhk" class="input-box" type="number" placeholder="BHK" min="1">
+
+    <button id="predictBtn" onclick="predict()">Predict Price</button>
+
+    <div id="result"></div>
+
+    <div class="graph-wrap" id="graphWrap">
+        <canvas id="priceChart"></canvas>
+    </div>
+</div>
+
+<script>
+const BASE_URL = "http://10.124.136.153:5000";
+let priceChart = null;
+
+function toggleMode(){
+    document.body.classList.toggle("light");
+    if (priceChart) {
+        priceChart.update();
+    }
+}
+
+function setCity(cityName){
+    const location = document.getElementById("location");
+    const target = cityName.toLowerCase();
+
+    for (let i = 0; i < location.options.length; i++) {
+        if (location.options[i].value.toLowerCase() === target) {
+            location.value = location.options[i].value;
+            return;
+        }
+    }
+}
+
+async function loadLocations(){
+    const dropdown = document.getElementById("location");
+
+    try {
+        const res = await fetch(BASE_URL + "/locations");
+        const data = await res.json();
+
+        dropdown.innerHTML = '<option value="">Select Location</option>';
+
+        data.locations.forEach(loc => {
+            const option = document.createElement("option");
+            option.value = loc;
+            option.textContent = loc;
+            dropdown.appendChild(option);
+        });
+
+    } catch (error) {
+        dropdown.innerHTML = '<option value="">Error loading locations</option>';
+        console.log("Location load error:", error);
+    }
+}
+
+async function predict(){
+    const btn = document.getElementById("predictBtn");
+    const result = document.getElementById("result");
+    const graphWrap = document.getElementById("graphWrap");
+
+    const location = document.getElementById("location").value;
+    const sqft = document.getElementById("sqft").value;
+    const bath = document.getElementById("bath").value;
+    const bhk = document.getElementById("bhk").value;
+
+    if (!location || !sqft || !bath || !bhk) {
+        result.className = "error";
+        result.innerHTML = "❌ Please fill all fields";
+        return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = "⏳ Predicting...";
+    result.className = "";
+    result.innerHTML = "⏳ Predicting...";
+    graphWrap.style.display = "none";
+
+    try {
+        const res = await fetch(BASE_URL + "/predict", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                location: location,
+                sqft: sqft,
+                bath: bath,
+                bhk: bhk
+            })
+        });
+
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+            throw new Error(data.error || "Prediction failed");
+        }
+
+        result.className = "success";
+        result.innerHTML = "💰 ₹ " + data.price + " Lakhs";
+
+        await loadRealGraph(location, bath, bhk);
+
+    } catch (error) {
+        result.className = "error";
+        result.innerHTML = "❌ " + error.message;
+        console.log("Predict error:", error);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = "Predict Price";
+    }
+}
+
+async function loadRealGraph(location, bath, bhk){
+    const graphWrap = document.getElementById("graphWrap");
+
+    const sqftPoints = [500, 700, 900, 1100, 1300, 1500, 1700, 1900];
+    const pricePoints = [];
+
+    for (const s of sqftPoints) {
+        try {
+            const res = await fetch(BASE_URL + "/predict", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    location: location,
+                    sqft: s,
+                    bath: bath,
+                    bhk: bhk
+                })
+            });
+
+            const data = await res.json();
+            pricePoints.push(data.price ?? 0);
+        } catch (e) {
+            pricePoints.push(0);
+        }
+    }
+
+    drawChart(sqftPoints, pricePoints);
+    graphWrap.style.display = "block";
+}
+
+function drawChart(labels, prices){
+    const ctx = document.getElementById("priceChart").getContext("2d");
+
+    if (priceChart) {
+        priceChart.destroy();
+    }
+
+    const gradient = ctx.createLinearGradient(0, 0, 0, 260);
+    gradient.addColorStop(0, "rgba(25,245,209,0.55)");
+    gradient.addColorStop(1, "rgba(25,245,209,0.05)");
+
+    const textColor = getComputedStyle(document.body).getPropertyValue('--text').trim() || "#fff";
+
+    priceChart = new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: "Predicted Price (Lakhs)",
+                data: prices,
+                borderColor: "#19f5d1",
+                backgroundColor: gradient,
+                pointBackgroundColor: "#19f5d1",
+                pointBorderColor: "#ffffff",
+                pointRadius: 5,
+                pointHoverRadius: 7,
+                tension: 0.42,
+                fill: true,
+                borderWidth: 3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1300,
+                easing: "easeInOutQuart"
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        color: textColor,
+                        font: {
+                            size: 13,
+                            weight: "bold"
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: "rgba(255,255,255,0.08)"
+                    },
+                    title: {
+                        display: true,
+                        text: "Square Feet",
+                        color: textColor
+                    }
+                },
+                y: {
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: "rgba(255,255,255,0.08)"
+                    },
+                    title: {
+                        display: true,
+                        text: "Price (Lakhs)",
+                        color: textColor
+                    }
+                }
+            }
+        }
+    });
+}
+
+/* Particles background */
+const canvas = document.getElementById("bg");
+const ctx = canvas.getContext("2d");
+
+function resizeCanvas(){
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+}
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+const particles = [];
+for(let i = 0; i < 70; i++){
+    particles.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 2 + 0.5,
+        dx: (Math.random() - 0.5) * 0.35,
+        dy: (Math.random() - 0.5) * 0.35
+    });
+}
+
+function drawParticles(){
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(255,255,255,0.9)";
+        ctx.fill();
+
+        p.x += p.dx;
+        p.y += p.dy;
+
+        if (p.x < 0) p.x = canvas.width;
+        if (p.x > canvas.width) p.x = 0;
+        if (p.y < 0) p.y = canvas.height;
+        if (p.y > canvas.height) p.y = 0;
+    });
+
+    requestAnimationFrame(drawParticles);
+}
+drawParticles();
+
+loadLocations();
+</script>
+
+</body>
+</html>
